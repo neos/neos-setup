@@ -11,10 +11,12 @@ namespace Neos\Neos\Setup\Step;
  * source code.
  */
 
+use Neos\ContentRepository\Domain\Repository\NodeDataRepository;
+use Neos\ContentRepository\Domain\Repository\WorkspaceRepository;
+use Neos\ContentRepository\Domain\Service\ContextFactoryInterface;
 use Neos\Flow\Annotations as Flow;
 use Neos\Flow\Log\ThrowableStorageInterface;
 use Neos\Flow\Log\Utility\LogEnvironment;
-use Neos\Flow\Mvc\FlashMessageContainer;
 use Neos\Flow\ObjectManagement\ObjectManagerInterface;
 use Neos\Flow\Package\Exception\InvalidPackageStateException;
 use Neos\Flow\Package\PackageKeyAwareInterface;
@@ -34,12 +36,9 @@ use Neos\Neos\Domain\Repository\DomainRepository;
 use Neos\Neos\Domain\Repository\SiteRepository;
 use Neos\Neos\Domain\Service\SiteImportService;
 use Neos\Neos\Validation\Validator\PackageKeyValidator;
-use Neos\Setup\Exception as SetupException;
 use Neos\Setup\Exception;
+use Neos\Setup\Exception as SetupException;
 use Neos\Setup\Step\AbstractStep;
-use Neos\ContentRepository\Domain\Repository\NodeDataRepository;
-use Neos\ContentRepository\Domain\Repository\WorkspaceRepository;
-use Neos\ContentRepository\Domain\Service\ContextFactoryInterface;
 use Neos\SiteKickstarter\Service\GeneratorService;
 use Psr\Log\LoggerInterface;
 
@@ -72,12 +71,6 @@ class SiteImportStep extends AbstractStep
      * @var DomainRepository
      */
     protected $domainRepository;
-
-    /**
-     * @Flow\Inject
-     * @var FlashMessageContainer
-     */
-    protected $flashMessageContainer;
 
     /**
      * @Flow\Inject
