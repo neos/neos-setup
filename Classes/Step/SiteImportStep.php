@@ -203,7 +203,7 @@ class SiteImportStep extends AbstractStep
             $siteName->setLabel('Site Name (e.g. "domain.com")');
         } else {
             $error = $importSection->createElement('neosKickstarterUnavailableError', 'Neos.Form:StaticText');
-            $error->setProperty('text', 'The Neos Kickstarter package (Neos.SiteKickstarter) is not installed, install it for kickstarting new sites (using "composer require typo3/neos-kickstarter")');
+            $error->setProperty('text', 'The Neos Kickstarter package (Neos.SiteKickstarter) is not installed, install it for kickstarting new sites (using "composer require neos/site-kickstarter")');
             $error->setProperty('elementClassAttribute', 'alert alert-warning');
         }
 
