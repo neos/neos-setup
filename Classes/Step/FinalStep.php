@@ -52,7 +52,7 @@ class FinalStep extends AbstractStep
         /** @var AbstractFormElement $docs */
         $docs = $congratulations->createElement('docsLink', 'Neos.Setup:LinkElement');
         $docs->setLabel('Read the documentation');
-        $docs->setProperty('href', 'https://neos.readthedocs.org/');
+        $docs->setProperty('href', 'https://docs.neos.io');
         $docs->setProperty('target', '_blank');
 
         $contextEnv = Bootstrap::getEnvironmentConfigurationSetting('FLOW_CONTEXT') ?: 'Development';
