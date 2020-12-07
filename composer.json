@@ -5,7 +5,7 @@
     "description": "Custom neos/setup steps and configuration for Neos CMS",
     "require": {
         "neos/setup": "^4.0 || dev-master",
-        "neos/neos": "^5.0 || dev-master"
+        "neos/neos": "^5.0 || ^7.0 || dev-master"
     },
     "autoload": {
         "psr-4": {
@@ -91,7 +91,12 @@
             "Neos.Neos-20180907103800",
             "Neos.Neos.Ui-20190319094900",
             "Neos.Flow-20190425144900",
-            "Neos.Flow-20190515215000"
+            "Neos.Flow-20190515215000",
+            "Neos.NodeTypes-20190917101945",
+            "Neos.NodeTypes-20200120114136",
+            "Neos.Flow-20200813181400",
+            "Neos.Flow-20201003165200",
+            "Neos.Flow-20201109224100"
         ]
     }
 }
