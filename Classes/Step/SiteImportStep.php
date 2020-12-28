@@ -39,7 +39,7 @@ use Neos\Neos\Validation\Validator\PackageKeyValidator;
 use Neos\Setup\Exception;
 use Neos\Setup\Exception as SetupException;
 use Neos\Setup\Step\AbstractStep;
-use Neos\SiteKickstarter\Service\GeneratorService;
+use Neos\SiteKickstarter\Generator\AfxTemplateGenerator;
 use Psr\Log\LoggerInterface;
 
 /**
@@ -252,7 +252,7 @@ class SiteImportStep extends AbstractStep
             $packageKey = $formValues['packageKey'];
             $siteName = $formValues['siteName'];
 
-            $generatorService = $this->objectManager->get(GeneratorService::class);
+            $generatorService = $this->objectManager->get(AfxTemplateGenerator::class);
             $generatorService->generateSitePackage($packageKey, $siteName);
         } elseif (!empty($formValues['site'])) {
             $packageKey = $formValues['site'];
