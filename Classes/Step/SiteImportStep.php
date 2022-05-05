@@ -74,18 +74,6 @@ class SiteImportStep extends AbstractStep
 
     /**
      * @Flow\Inject
-     * @var NodeDataRepository
-     */
-    protected $nodeDataRepository;
-
-    /**
-     * @Flow\Inject
-     * @var WorkspaceRepository
-     */
-    protected $workspaceRepository;
-
-    /**
-     * @Flow\Inject
      * @var PersistenceManagerInterface
      */
     protected $persistenceManager;
@@ -100,12 +88,6 @@ class SiteImportStep extends AbstractStep
      * @var ClosureFinisher
      */
     protected $closureFinisher;
-
-    /**
-     * @Flow\Inject
-     * @var ContextFactoryInterface
-     */
-    protected $contextFactory;
 
     /**
      * @var LoggerInterface
@@ -237,7 +219,9 @@ class SiteImportStep extends AbstractStep
     {
         $formValues = $finisherContext->getFormRuntime()->getFormState()->getFormValues();
 
-        if (isset($formValues['prune']) && (int)$formValues['prune'] === 1) {
+        throw new \RuntimeException('TODO - implement - see https://github.com/neos/neos-development-collection/issues/3747');
+
+        /*if (isset($formValues['prune']) && (int)$formValues['prune'] === 1) {
             $this->nodeDataRepository->removeAll();
             $this->workspaceRepository->removeAll();
             $this->domainRepository->removeAll();
@@ -267,6 +251,6 @@ class SiteImportStep extends AbstractStep
                 $this->logger->error($logMessage, LogEnvironment::fromMethodName(__METHOD__));
                 throw new SetupException(sprintf('Error: During the import of the "Sites.xml" from the package "%s" an exception occurred: %s', $packageKey, $exception->getMessage()), 1351000864);
             }
-        }
+        }*/
     }
 }
