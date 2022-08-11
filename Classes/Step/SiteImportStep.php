@@ -61,7 +61,7 @@ class SiteImportStep extends AbstractStep
     protected $siteRepository;
 
     /**
-     * @Flow\Inject
+     * __ TODO FIX ME Flow\Inject
      * @var SiteImportService
      */
     protected $siteImportService;
