@@ -3,7 +3,6 @@
 namespace Neos\Neos\Setup\Infrastructure\Healthcheck;
 
 use Neos\Flow\Configuration\ConfigurationManager;
-use Neos\Flow\Core\Bootstrap;
 use Neos\Neos\Setup\Infrastructure\ImageHandler\ImageHandlerService;
 use Neos\Setup\Domain\Health;
 use Neos\Setup\Domain\HealthcheckInterface;
@@ -15,14 +14,6 @@ class ImageHandlerHealthcheck implements HealthcheckInterface
         private readonly ConfigurationManager $configurationManager,
         private readonly ImageHandlerService $imageHandlerService,
     ) {
-    }
-
-    public static function fromBootstrap(Bootstrap $bootstrap): HealthcheckInterface
-    {
-        return new self(
-            $bootstrap->getObjectManager()->get(ConfigurationManager::class),
-            $bootstrap->getObjectManager()->get(ImageHandlerService::class),
-        );
     }
 
     public function getTitle(): string
