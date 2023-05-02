@@ -13,13 +13,10 @@ namespace Neos\Neos\Setup\Command;
  * source code.
  */
 
-use Neos\Error\Messages\Message;
 use Neos\Flow\Annotations as Flow;
 use Neos\Flow\Cli\CommandController;
+use Neos\Neos\Setup\Infrastructure\ImageHandler\ImageHandlerService;
 use Neos\Utility\Arrays;
-use Neos\CliSetup\Exception as SetupException;
-use Neos\CliSetup\Infrastructure\Database\DatabaseConnectionService;
-use Neos\CliSetup\Infrastructure\ImageHandler\ImageHandlerService;
 use Symfony\Component\Yaml\Yaml;
 
 /**
@@ -34,34 +31,28 @@ class SetupCommandController extends CommandController
     protected $imageHandlerService;
 
     /**
-     * @var string
-     * @Flow\InjectConfiguration(package="Neos.Imagine", path="driver")
-     */
-    protected $imagineDriver;
-
-    public function testCommand()
-    {
-        $message = new Message('foo', 123, [], 'title');
-        echo json_encode($message);
-    }
-
-    /**
      * @param string|null $driver
      */
     public function imageHandlerCommand(string $driver = null): void
     {
         $availableImageHandlers = $this->imageHandlerService->getAvailableImageHandlers();
 
-        if (count($availableImageHandlers) == 0) {
+        if (count($availableImageHandlers) === 0) {
             $this->outputLine('No supported image handler found.');
             $this->quit(1);
         }
 
-        if (is_null($driver)) {
+        $availableDriversWithDescription = [];
+        foreach ($availableImageHandlers as $imageHandler) {
+            $availableDriversWithDescription[$imageHandler->driverName] = $imageHandler->description;
+        }
+
+        if ($driver === null || $driver === '') {
+            $preferredImageHandler = $this->imageHandlerService->getPreferredImageHandler();
             $driver = $this->output->select(
-                sprintf('Select Image Handler (<info>%s</info>): ', array_key_last($availableImageHandlers)),
-                $availableImageHandlers,
-                array_key_last($availableImageHandlers)
+                sprintf('Select Image Handler (<info>%s</info>): ', $preferredImageHandler->driverName),
+                $availableDriversWithDescription,
+                $preferredImageHandler->driverName
             );
         }
 
@@ -80,14 +71,14 @@ class SetupCommandController extends CommandController
      * @param mixed $settings The actual settings to write
      * @return string The added yaml code
      */
-    protected function writeSettings(string $filename, string $path, $settings): string
+    private function writeSettings(string $filename, string $path, $settings): string
     {
         if (file_exists($filename)) {
-            $previousSettings = Yaml::parseFile($filename);
+            $previousSettings = Yaml::parseFile($filename) ?? [];
         } else {
             $previousSettings = [];
         }
-        $newSettings = Arrays::setValueByPath($previousSettings,$path, $settings);
+        $newSettings = Arrays::setValueByPath($previousSettings, $path, $settings);
         file_put_contents($filename, YAML::dump($newSettings, 10, 2));
         return YAML::dump(Arrays::setValueByPath([],$path, $settings), 10, 2);
     }

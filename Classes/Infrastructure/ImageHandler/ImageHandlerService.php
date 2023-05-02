@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace Neos\CliSetup\Infrastructure\ImageHandler;
+namespace Neos\Neos\Setup\Infrastructure\ImageHandler;
 
 /*
  * This file is part of the Neos.CliSetup package.
@@ -18,49 +18,68 @@ use Neos\Imagine\ImagineFactory;
 
 class ImageHandlerService
 {
-
     /**
-     * @Flow\InjectConfiguration(path="supportedImageHandlers")
-     * @var string[]
+     * @Flow\InjectConfiguration(path="supportedImageHandlersByPreference")
+     * @var array<int, array{driverName: string, description: string}>
      */
-    protected $supportedImageHandlers;
+    protected array $supportedImageHandlersByPreference;
 
     /**
      * @Flow\InjectConfiguration(path="requiredImageFormats")
      * @var string[]
      */
-    protected $requiredImageFormats;
+    protected array $requiredImageFormats;
 
     /**
      * @Flow\Inject
-     * @var ImagineFactory
      */
-    protected $imagineFactory;
+    protected ImagineFactory $imagineFactory;
+
+    /**
+     * @var array<int,ImageHandler>
+     */
+    protected array $availableImageHandlers;
 
     /**
      * Return all Imagine drivers that support the loading of the required images
      *
-     * @return array<string,string>
+     * @return array<int,ImageHandler>
      */
     public function getAvailableImageHandlers(): array
     {
+        if (isset($this->availableImageHandlers)) {
+            return $this->availableImageHandlers;
+        }
         $availableImageHandlers = [];
-        foreach ($this->supportedImageHandlers as $driverName => $description) {
+        foreach ($this->supportedImageHandlersByPreference as [
+            'driverName' => $driverName,
+            'description' => $description
+        ]) {
             if (\extension_loaded(strtolower($driverName))) {
                 $unsupportedFormats = $this->findUnsupportedImageFormats($driverName);
                 if (\count($unsupportedFormats) === 0) {
-                    $availableImageHandlers[$driverName] = $description;
+                    $availableImageHandlers[] = new ImageHandler(
+                        driverName: $driverName,
+                        description: $description
+                    );
                 }
             }
         }
-        return $availableImageHandlers;
+        return $this->availableImageHandlers = $availableImageHandlers;
+    }
+
+    public function getPreferredImageHandler(): ?ImageHandler
+    {
+        $availableImageHandlers = $this->getAvailableImageHandlers();
+        return reset($availableImageHandlers)
+            ?: throw new \RuntimeException('No supported image handler found.');
     }
 
     /**
      * @param string $driver
      * @return array Not supported image formats
      */
-    protected function findUnsupportedImageFormats(string $driver): array
+    private function findUnsupportedImageFormats(string $driver): array
     {
         $this->imagineFactory->injectSettings(['driver' => ucfirst($driver)]);
         $imagine = $this->imagineFactory->create();
