@@ -6,6 +6,8 @@ Neos:
           className: Neos\Neos\Setup\Infrastructure\Healthcheck\UserHealthcheck
         imagehandling:
           className: Neos\Neos\Setup\Infrastructure\Healthcheck\ImageHandlerHealthcheck
+        site:
+          className: Neos\Neos\Setup\Infrastructure\Healthcheck\SiteHealthcheck
 
   Neos:
     Setup:
