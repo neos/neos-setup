@@ -2,29 +2,21 @@
 
 namespace Neos\Neos\Setup\Infrastructure\Healthcheck;
 
-use Neos\Flow\Core\Bootstrap;
-use Neos\Flow\Http\HttpRequestHandlerInterface;
 use Neos\Flow\Package\PackageManager;
 use Neos\Neos\Domain\Model\Site;
 use Neos\Neos\Domain\Repository\SiteRepository;
 use Neos\Setup\Domain\Health;
+use Neos\Setup\Domain\HealthcheckEnvironment;
 use Neos\Setup\Domain\HealthcheckInterface;
 use Neos\Setup\Domain\Status;
-use Psr\Http\Message\ServerRequestInterface;
+use Neos\Setup\Domain\WebEnvironment;
 
 class SiteHealthcheck implements HealthcheckInterface
 {
-    private readonly ?ServerRequestInterface $request;
-
     public function __construct(
         private readonly SiteRepository $siteRepository,
-        private readonly PackageManager $packageManager,
-        Bootstrap $bootstrap
+        private readonly PackageManager $packageManager
     ) {
-        $activeRequestHandler = $bootstrap->getActiveRequestHandler();
-        $this->request = $activeRequestHandler instanceof HttpRequestHandlerInterface
-            ? $activeRequestHandler->getHttpRequest()
-            : null;
     }
 
     public function getTitle(): string
@@ -32,13 +24,13 @@ class SiteHealthcheck implements HealthcheckInterface
         return 'Neos site';
     }
 
-    public function execute(): Health
+    public function execute(HealthcheckEnvironment $environment): Health
     {
         /** @var Site[] $sites */
         $sites = $this->siteRepository->findAll()->toArray();
         if (count($sites)) {
-            if ($this->request) {
-                $root = $this->request->getUri()
+            if ($environment->executionEnvironment instanceof WebEnvironment) {
+                $root = $environment->executionEnvironment->requestUri
                     ->withPath('')
                     ->withQuery('')
                     ->withFragment('');
@@ -48,6 +40,10 @@ class SiteHealthcheck implements HealthcheckInterface
                 $openNeosLink = 'You can now visit your neos and login via at the path: <em>/neos</em>';
             }
             return new Health('Neos site exists. ' . $openNeosLink, Status::OK);
+        }
+
+        if (!$environment->isSafeToLeakTechnicalDetails()) {
+            return new Health('No Neos site was created. You can run <code>./flow site:import</code> to import one.', Status::WARNING);
         }
 
         $availableSitePackagesToBeImported = [];
@@ -69,8 +65,8 @@ class SiteHealthcheck implements HealthcheckInterface
             }
 
             return new Health(<<<MSG
-            No Neos site was created.
-            You can kickstart a new site package via <code>./flow kickstart:site My.Site my-site</code> and import it via <code>./flow site:import --package-key My.Site</code>
+            No Neos site was created. You can kickstart a new site package via <code>./flow kickstart:site My.Site my-site</code>
+            and import it via <code>./flow site:import --package-key My.Site</code>
             MSG, Status::WARNING);
         }
 

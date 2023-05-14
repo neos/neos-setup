@@ -5,6 +5,7 @@ namespace Neos\Neos\Setup\Infrastructure\Healthcheck;
 use Neos\Flow\Configuration\ConfigurationManager;
 use Neos\Neos\Setup\Infrastructure\ImageHandler\ImageHandlerService;
 use Neos\Setup\Domain\Health;
+use Neos\Setup\Domain\HealthcheckEnvironment;
 use Neos\Setup\Domain\HealthcheckInterface;
 use Neos\Setup\Domain\Status;
 
@@ -21,7 +22,7 @@ class ImageHandlerHealthcheck implements HealthcheckInterface
         return 'Image handling';
     }
 
-    public function execute(): Health
+    public function execute(HealthcheckEnvironment $environment): Health
     {
         $configuredDriver = $this->configurationManager->getConfiguration(
             ConfigurationManager::CONFIGURATION_TYPE_SETTINGS,

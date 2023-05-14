@@ -4,6 +4,7 @@ namespace Neos\Neos\Setup\Infrastructure\Healthcheck;
 
 use Neos\Neos\Domain\Repository\UserRepository;
 use Neos\Setup\Domain\Health;
+use Neos\Setup\Domain\HealthcheckEnvironment;
 use Neos\Setup\Domain\HealthcheckInterface;
 use Neos\Setup\Domain\Status;
 
@@ -19,7 +20,7 @@ class UserHealthcheck implements HealthcheckInterface
         return 'Neos user';
     }
 
-    public function execute(): Health
+    public function execute(HealthcheckEnvironment $environment): Health
     {
         $users = $this->userRepository->findAll();
         if (!$users->count()) {
