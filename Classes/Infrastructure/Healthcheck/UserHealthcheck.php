@@ -24,9 +24,7 @@ class UserHealthcheck implements HealthcheckInterface
         $users = $this->userRepository->findAll();
         if (!$users->count()) {
             return new Health(<<<'MSG'
-            There is no Neos user created yet. To create one please run
-            <code>./flow user:create --roles Administrator</code>
-            and follow the instructions.
+            There is no Neos user created yet. To create one please run <code>./flow user:create --roles Administrator</code>
             MSG, Status::ERROR);
         }
 
