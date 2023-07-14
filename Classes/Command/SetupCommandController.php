@@ -38,7 +38,14 @@ class SetupCommandController extends CommandController
         $availableImageHandlers = $this->imageHandlerService->getAvailableImageHandlers();
 
         if (count($availableImageHandlers) === 0) {
-            $this->outputLine('No supported image handler found.');
+            $this->outputLine(
+                sprintf(
+                    'No supported image handler found.%s',
+                    PHP_OS_FAMILY === 'Windows'
+                        ? ' To enabled GD for basic image driver support during development, uncomment (remove the <em>;</em>) <em>;extension=gd</em> in your php.ini.'
+                        : '',
+                )
+            );
             $this->quit(1);
         }
 

@@ -24,12 +24,24 @@ class ImageHandlerHealthcheck implements HealthcheckInterface
 
     public function execute(HealthcheckEnvironment $environment): Health
     {
+        $availableImageHandlers = $this->imageHandlerService->getAvailableImageHandlers();
+
+        if (count($availableImageHandlers) === 0) {
+            return new Health(sprintf(
+                'No supported image handler found.%s',
+                $environment->executionEnvironment->isWindows
+                    ? ' To enabled GD for basic image driver support during development, uncomment (remove the <em>;</em>) <em>;extension=gd</em> in your php.ini.'
+                    : '',
+            ), Status::ERROR);
+        }
+
         $configuredDriver = $this->configurationManager->getConfiguration(
             ConfigurationManager::CONFIGURATION_TYPE_SETTINGS,
             'Neos.Imagine.driver'
         );
 
         if (!$configuredDriver) {
+            // should never happen, as it defaults to GD
             return new Health(<<<'MSG'
             No image driver in <em>Neos.Imagine.driver</em> configured. For configuration you can use <code>{{flowCommand}} setup:imagehandler</code>
             MSG, Status::ERROR);

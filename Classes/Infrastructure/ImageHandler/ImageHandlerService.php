@@ -68,7 +68,7 @@ class ImageHandlerService
         return $this->availableImageHandlers = $availableImageHandlers;
     }
 
-    public function getPreferredImageHandler(): ?ImageHandler
+    public function getPreferredImageHandler(): ImageHandler
     {
         $availableImageHandlers = $this->getAvailableImageHandlers();
         return reset($availableImageHandlers)
