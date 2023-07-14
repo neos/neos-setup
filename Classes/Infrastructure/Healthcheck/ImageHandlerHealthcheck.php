@@ -31,7 +31,7 @@ class ImageHandlerHealthcheck implements HealthcheckInterface
 
         if (!$configuredDriver) {
             return new Health(<<<'MSG'
-            No image driver in <em>Neos.Imagine.driver</em> configured. For configuration you can use <code>./flow setup:imagehandler</code>
+            No image driver in <em>Neos.Imagine.driver</em> configured. For configuration you can use <code>{{flowCommand}} setup:imagehandler</code>
             MSG, Status::ERROR);
         }
 
@@ -39,7 +39,7 @@ class ImageHandlerHealthcheck implements HealthcheckInterface
 
         if ($configuredDriver !== $preferredImageHandler->driverName) {
             return new Health(<<<'MSG'
-            You can use a more optional image driver than in <em>Neos.Imagine.driver</em> configured. For configuration you can use <code>./flow setup:imagehandler</code>
+            You can use a more optional image driver than in <em>Neos.Imagine.driver</em> configured. For configuration you can use <code>{{flowCommand}} setup:imagehandler</code>
             MSG, Status::WARNING);
         }
 
