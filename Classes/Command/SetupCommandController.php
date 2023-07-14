@@ -15,24 +15,19 @@ namespace Neos\Neos\Setup\Command;
 
 use Neos\Flow\Annotations as Flow;
 use Neos\Flow\Cli\CommandController;
+use Neos\Flow\Core\Bootstrap;
 use Neos\Neos\Setup\Infrastructure\ImageHandler\ImageHandlerService;
 use Neos\Utility\Arrays;
 use Symfony\Component\Yaml\Yaml;
 
-/**
- * @Flow\Scope("singleton")
- */
 class SetupCommandController extends CommandController
 {
-    /**
-     * @var ImageHandlerService
-     * @Flow\Inject
-     */
-    protected $imageHandlerService;
+    #[Flow\Inject]
+    protected ImageHandlerService $imageHandlerService;
 
-    /**
-     * @param string|null $driver
-     */
+    #[Flow\Inject]
+    protected Bootstrap $bootstrap;
+
     public function imageHandlerCommand(string $driver = null): void
     {
         $availableImageHandlers = $this->imageHandlerService->getAvailableImageHandlers();
@@ -63,7 +58,7 @@ class SetupCommandController extends CommandController
             );
         }
 
-        $filename = 'Configuration/Settings.Imagehandling.yaml';
+        $filename = sprintf('Configuration/%s/Settings.Imagehandling.yaml', $this->bootstrap->getContext()->__toString());
         $this->outputLine();
         $this->output(sprintf('<info>%s</info>', $this->writeSettings($filename, 'Neos.Imagine.driver', $driver)));
         $this->outputLine();
@@ -78,7 +73,7 @@ class SetupCommandController extends CommandController
      * @param mixed $settings The actual settings to write
      * @return string The added yaml code
      */
-    private function writeSettings(string $filename, string $path, $settings): string
+    private function writeSettings(string $filename, string $path, mixed $settings): string
     {
         if (file_exists($filename)) {
             $previousSettings = Yaml::parseFile($filename) ?? [];
