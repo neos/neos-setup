@@ -39,11 +39,11 @@ class SiteHealthcheck implements HealthcheckInterface
             } else {
                 $openNeosLink = 'You can now visit your neos and login via at the path: <em>/neos</em>';
             }
-            return new Health('Neos site exists. ' . $openNeosLink, Status::OK);
+            return new Health('Neos site exists. ' . $openNeosLink, Status::OK());
         }
 
         if (!$environment->isSafeToLeakTechnicalDetails()) {
-            return new Health('No Neos site was created. You can run <code>{{flowCommand}} site:import</code> to import one.', Status::WARNING);
+            return new Health('No Neos site was created. You can run <code>{{flowCommand}} site:import</code> to import one.', Status::WARNING());
         }
 
         $availableSitePackagesToBeImported = [];
@@ -61,25 +61,25 @@ class SiteHealthcheck implements HealthcheckInterface
                 Or you can create a new site package completely from scratch via <code>{{flowCommand}} package:create My.Site --package-type=neos-site</code>.
                 After that you need to create a root NodeType (for the homepage) and setup basic rendering.
                 Then you can create a site via <code>{{flowCommand}} site:create</code>.
-                MSG, Status::WARNING);
+                MSG, Status::WARNING());
             }
 
             return new Health(<<<MSG
             No Neos site was created. You can kickstart a new site package via <code>{{flowCommand}} kickstart:site My.Site my-site</code>
             and import it via <code>{{flowCommand}} site:import --package-key My.Site</code>
-            MSG, Status::WARNING);
+            MSG, Status::WARNING());
         }
 
         if (count($availableSitePackagesToBeImported) === 1) {
             $availableSitePackageKey = $availableSitePackagesToBeImported[0];
             return new Health(<<<MSG
             No Neos site was created. To import the site from $availableSitePackageKey you can run <code>{{flowCommand}} site:import --package-key $availableSitePackageKey</code>
-            MSG, Status::WARNING);
+            MSG, Status::WARNING());
         }
 
         $availableSitePackages = join(', ', $availableSitePackagesToBeImported);
         return new Health(<<<MSG
         No Neos site was created. To import from one of the available site packages ($availableSitePackages) you can run <code>{{flowCommand}} site:import --package-key Package.Key</code>
-        MSG, Status::WARNING);
+        MSG, Status::WARNING());
     }
 }

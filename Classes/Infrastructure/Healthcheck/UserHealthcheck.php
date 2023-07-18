@@ -26,9 +26,9 @@ class UserHealthcheck implements HealthcheckInterface
         if (!$users->count()) {
             return new Health(<<<'MSG'
             There is no Neos user created yet. To create one please run <code>{{flowCommand}} user:create --roles Administrator</code>
-            MSG, Status::ERROR);
+            MSG, Status::ERROR());
         }
 
-        return new Health('At least one Neos user exists', Status::OK);
+        return new Health('At least one Neos user exists', Status::OK());
     }
 }
