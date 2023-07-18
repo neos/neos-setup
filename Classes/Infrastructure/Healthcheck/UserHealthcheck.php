@@ -11,7 +11,7 @@ use Neos\Setup\Domain\Status;
 class UserHealthcheck implements HealthcheckInterface
 {
     public function __construct(
-        private readonly UserRepository $userRepository
+        private UserRepository $userRepository
     ) {
     }
 

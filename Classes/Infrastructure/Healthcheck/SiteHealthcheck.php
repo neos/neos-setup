@@ -14,8 +14,8 @@ use Neos\Setup\Domain\WebEnvironment;
 class SiteHealthcheck implements HealthcheckInterface
 {
     public function __construct(
-        private readonly SiteRepository $siteRepository,
-        private readonly PackageManager $packageManager
+        private SiteRepository $siteRepository,
+        private PackageManager $packageManager
     ) {
     }
 

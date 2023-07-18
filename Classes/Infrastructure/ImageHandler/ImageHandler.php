@@ -8,8 +8,8 @@ use Neos\Flow\Annotations as Flow;
 class ImageHandler
 {
     public function __construct(
-        public readonly string $driverName,
-        public readonly string $description
+        /** @psalm-readonly */ public string $driverName,
+        /** @psalm-readonly */ public string $description
     ) {
     }
 }

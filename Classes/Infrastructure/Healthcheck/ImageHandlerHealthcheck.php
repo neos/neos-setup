@@ -12,8 +12,8 @@ use Neos\Setup\Domain\Status;
 class ImageHandlerHealthcheck implements HealthcheckInterface
 {
     public function __construct(
-        private readonly ConfigurationManager $configurationManager,
-        private readonly ImageHandlerService $imageHandlerService,
+        private ConfigurationManager $configurationManager,
+        private ImageHandlerService $imageHandlerService,
     ) {
     }
 
