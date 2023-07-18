@@ -31,17 +31,37 @@ class ImageHandlerService
     protected array $requiredImageFormats;
 
     /**
-     * @Flow\Inject
+     * @Flow\InjectConfiguration(path="enabledDrivers", package="Neos.Imagine")
+     * @var array<string, bool>
      */
-    protected ImagineFactory $imagineFactory;
+    protected array $enabledDrivers;
+
+    /**
+     * @var ImagineFactory
+     */
+    protected $imagineFactory;
 
     /**
      * @var array<int,ImageHandler>
      */
     protected array $availableImageHandlers;
 
+    public function __construct()
+    {
+        //
+        // Hack. We instantiate the unproxied class without injected settings.
+        // This is to allow to still reconfigure the image driver, even if it is disabled.
+        // The "driver" Gd for Imagine must be enabled by settings, check Neos.Imagine.enabledDrivers. Or use ./flow setup:imagehandler
+        // otherwise ImagineFactory::injectSettings will be called by the object framework and we validate inside `injectSettings` that the driver must be enabled.
+        //
+        class_exists(ImagineFactory::class);
+        $this->imagineFactory = new (ImagineFactory::class . '_Original')();
+    }
+
     /**
      * Return all Imagine drivers that support the loading of the required images
+     *
+     * Ignoring the configuration `Neos.Imagine.enabledDrivers`
      *
      * @return array<int,ImageHandler>
      */
@@ -73,6 +93,11 @@ class ImageHandlerService
         $availableImageHandlers = $this->getAvailableImageHandlers();
         return reset($availableImageHandlers)
             ?: throw new \RuntimeException('No supported image handler found.');
+    }
+
+    public function isDriverEnabledInConfiguration(string $driverName): bool
+    {
+        return (bool)($this->enabledDrivers[$driverName] ?? false);
     }
 
     /**
