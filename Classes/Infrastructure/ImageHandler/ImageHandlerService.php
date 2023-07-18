@@ -55,7 +55,7 @@ class ImageHandlerService
             'driverName' => $driverName,
             'description' => $description
         ]) {
-            if (\extension_loaded(strtolower($driverName))) {
+            if (\extension_loaded(strtolower($driverName)) && $this->imagineFactory->isDriverAvailable(ucfirst($driverName))) {
                 $unsupportedFormats = $this->findUnsupportedImageFormats($driverName);
                 if (\count($unsupportedFormats) === 0) {
                     $availableImageHandlers[] = new ImageHandler(
@@ -81,8 +81,7 @@ class ImageHandlerService
      */
     private function findUnsupportedImageFormats(string $driver): array
     {
-        $this->imagineFactory->injectSettings(['driver' => ucfirst($driver)]);
-        $imagine = $this->imagineFactory->create();
+        $imagine = $this->imagineFactory->createDriver(ucfirst($driver));
         $unsupportedFormats = [];
 
         foreach ($this->requiredImageFormats as $imageFormat => $testFile) {
