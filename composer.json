@@ -6,7 +6,7 @@
     "require": {
         "php": "^8.0",
         "neos/setup": "^6.0 || dev-master",
-        "neos/neos": "^8.0",
+        "neos/neos": "^9.0",
         "neos/imagine": "^3.3.1"
     },
     "autoload": {
