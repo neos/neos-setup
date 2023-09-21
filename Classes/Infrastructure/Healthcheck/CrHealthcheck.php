@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Neos\Neos\Setup\Infrastructure\Healthcheck;
 
+use Doctrine\DBAL\Schema\AbstractSchemaManager;
 use Neos\ContentRepository\Core\Infrastructure\DbalClientInterface;
 use Neos\Flow\Configuration\ConfigurationManager;
 use Neos\Setup\Domain\Health;
@@ -42,6 +43,9 @@ class CrHealthcheck implements HealthcheckInterface
 
         $connection = $this->dbalClient->getConnection();
         $schemaManager = $connection->getSchemaManager();
+        if (!$schemaManager instanceof AbstractSchemaManager) {
+            throw new \RuntimeException('Failed to retrieve Schema Manager', 1691250062732);
+        }
 
         $existingTableNames = $schemaManager->listTableNames();
 
