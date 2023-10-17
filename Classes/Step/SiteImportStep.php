@@ -158,7 +158,7 @@ class SiteImportStep extends AbstractStep
         $importSection->setLabel('Import a site from an existing site package');
 
         $sitePackages = [];
-        foreach ($this->packageManager->getFilteredPackages('available', null, 'neos-site') as $package) {
+        foreach ($this->packageManager->getFilteredPackages('available', 'neos-site') as $package) {
             if (!$package instanceof PackageKeyAwareInterface) {
                 continue;
             }
