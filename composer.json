@@ -5,9 +5,12 @@
     "description": "Custom neos/setup steps and configuration for Neos CMS",
     "require": {
         "php": "^8.0",
-        "neos/setup": "^6.0 || dev-master",
+        "neos/setup": "^6.0 || dev-main",
         "neos/neos": "^9.0",
         "neos/imagine": "^3.3.1"
+    },
+    "branch-alias": {
+        "dev-main": "4.0.x-dev"
     },
     "autoload": {
         "psr-4": {
