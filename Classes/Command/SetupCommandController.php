@@ -69,7 +69,7 @@ class SetupCommandController extends CommandController
             $settingsToWrite['enabledDrivers'][$driver] = true;
         }
 
-        $filename = sprintf('Configuration/%s/Settings.Imagehandling.yaml', $this->bootstrap->getContext()->__toString());
+        $filename = sprintf('%s%s/Settings.Imagehandling.yaml', FLOW_PATH_CONFIGURATION, $this->bootstrap->getContext()->__toString());
         $this->outputLine();
         $this->output(sprintf('<info>%s</info>', $this->writeSettings($filename, 'Neos.Imagine', $settingsToWrite)));
         $this->outputLine();
