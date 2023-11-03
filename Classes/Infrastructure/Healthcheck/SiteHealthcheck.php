@@ -43,12 +43,13 @@ class SiteHealthcheck implements HealthcheckInterface
         }
 
         if (!$environment->isSafeToLeakTechnicalDetails()) {
-            return new Health('No Neos site was created. You can run <code>{{flowCommand}} site:import</code> to import one.', Status::WARNING());
+            // TODO adjust to 9.0
+            return new Health('No Neos site was created. Please visit the documentation how setup a site.', Status::WARNING());
         }
 
         $availableSitePackagesToBeImported = [];
         foreach ($this->packageManager->getFilteredPackages('available', 'neos-site') as $sitePackage) {
-            $possibleSiteContentToImport = sprintf('resource://%s/Private/Content/Sites.xml', $sitePackage->getPackageKey());
+            $possibleSiteContentToImport = sprintf('resource://%s/Private/Content/events.jsonl', $sitePackage->getPackageKey());
             if (file_exists($possibleSiteContentToImport)) {
                 $availableSitePackagesToBeImported[] = $sitePackage->getPackageKey();
             }
@@ -56,6 +57,7 @@ class SiteHealthcheck implements HealthcheckInterface
 
         if (count($availableSitePackagesToBeImported) === 0) {
             if (!$this->packageManager->isPackageAvailable('Neos.SiteKickstarter')) {
+                // TODO adjust to 9.0
                 return new Health(<<<MSG
                 No Neos site was created. You might want to install the site kickstarter: <code>composer require neos/site-kickstarter</code>.
                 Or you can create a new site package completely from scratch via <code>{{flowCommand}} package:create My.Site --package-type=neos-site</code>.
@@ -64,22 +66,24 @@ class SiteHealthcheck implements HealthcheckInterface
                 MSG, Status::WARNING());
             }
 
+            // TODO adjust to 9.0
             return new Health(<<<MSG
             No Neos site was created. You can kickstart a new site package via <code>{{flowCommand}} kickstart:site My.Site my-site</code>
             and import it via <code>{{flowCommand}} site:import --package-key My.Site</code>
             MSG, Status::WARNING());
         }
 
-        if (count($availableSitePackagesToBeImported) === 1) {
-            $availableSitePackageKey = $availableSitePackagesToBeImported[0];
+        if (count($availableSitePackagesToBeImported) === 1 && $availableSitePackagesToBeImported[0] === 'Neos.Demo') {
+            // TODO adjust to 9.0 (make less specific to neos demo)
             return new Health(<<<MSG
-            No Neos site was created. To import the site from $availableSitePackageKey you can run <code>{{flowCommand}} site:import --package-key $availableSitePackageKey</code>
+            No Neos site was created. To import the site from Neos.Demo you can run <code>{{flowCommand}} site:create neosdemo Neos.Demo Neos.Demo:Document.Homepage</code> and <code>{{flowCommand}} cr:prune</code> and <code>{{flowCommand}} cr:import resource://Neos.Demo/Private/Content</code>
             MSG, Status::WARNING());
         }
 
+        // TODO adjust to 9.0
         $availableSitePackages = join(', ', $availableSitePackagesToBeImported);
         return new Health(<<<MSG
-        No Neos site was created. To import from one of the available site packages ($availableSitePackages) you can run <code>{{flowCommand}} site:import --package-key Package.Key</code>
+        No Neos site was created. To import from one of the available site packages ($availableSitePackages) follow the steps from the documentation.
         MSG, Status::WARNING());
     }
 }
