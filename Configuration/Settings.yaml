@@ -1,25 +1,37 @@
 Neos:
   Setup:
-    stepOrder:
-      - neosRequirements
-      - database
-      - administrator
-      - siteimport
-      - final
-    steps:
-      neosRequirements:
-        className: Neos\Neos\Setup\Step\NeosSpecificRequirementsStep
-      administrator:
-        className: Neos\Neos\Setup\Step\AdministratorStep
-        requiredConditions:
-          -
-            className: Neos\Setup\Condition\DatabaseConnectionCondition
-      siteimport:
-        className: Neos\Neos\Setup\Step\SiteImportStep
-        requiredConditions:
-          -
-            className: Neos\Setup\Condition\DatabaseConnectionCondition
-      final:
-        className: Neos\Neos\Setup\Step\FinalStep
-    view:
-      title: 'Neos Setup'
+    healthchecks:
+      runtime:
+        user:
+          className: Neos\Neos\Setup\Infrastructure\Healthcheck\UserHealthcheck
+        imagehandling:
+          className: Neos\Neos\Setup\Infrastructure\Healthcheck\ImageHandlerHealthcheck
+        site:
+          className: Neos\Neos\Setup\Infrastructure\Healthcheck\SiteHealthcheck
+
+  Neos:
+    Setup:
+      #
+      # Imagine drivers that are supported
+      #
+      supportedImageHandlersByPreference:
+        -
+          driverName: 'Gd'
+          description: 'GD Library - generally slow, not recommended in production'
+        -
+          driverName: 'Gmagick'
+          description: 'Gmagick php module'
+        -
+          driverName: 'Imagick'
+          description: 'ImageMagick php module'
+        -
+          driverName: 'Vips'
+          description: 'Vips php module - fast and memory efficient, needs rokka/imagine-vips'
+
+      #
+      # Images to verify that the format can be handled
+      #
+      requiredImageFormats:
+        'jpg': 'resource://Neos.Neos/Private/Installer/TestImages/Test.jpg'
+        'gif': 'resource://Neos.Neos/Private/Installer/TestImages/Test.gif'
+        'png': 'resource://Neos.Neos/Private/Installer/TestImages/Test.png'
