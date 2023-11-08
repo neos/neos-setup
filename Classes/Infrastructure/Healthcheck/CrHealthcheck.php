@@ -22,7 +22,7 @@ class CrHealthcheck implements HealthcheckInterface
 
     public function getTitle(): string
     {
-        return 'Neos ContentRepository';
+        return 'Neos content repository';
     }
 
     public function execute(HealthcheckEnvironment $environment): Health
@@ -49,15 +49,45 @@ class CrHealthcheck implements HealthcheckInterface
 
         $existingTableNames = $schemaManager->listTableNames();
 
+        $unSetupContentRepositories = [];
         foreach ($crIdentifiers as $crIdentifier) {
             $eventTableName = sprintf('cr_%s_events', $crIdentifier);
 
-            if (!in_array($eventTableName, $existingTableNames, true)) {
-                return new Health(
-                    sprintf('Content repository "%s" was not setup. Please run <code>{{flowCommand}} cr:setup</code>', $crIdentifier),
-                    Status::ERROR(),
-                );
+            $isCrSetup = in_array($eventTableName, $existingTableNames, true);
+            if (!$isCrSetup) {
+                $unSetupContentRepositories[] = $crIdentifier;
             }
+        }
+
+        if (count($crIdentifiers) === count($unSetupContentRepositories)) {
+            $rest = $unSetupContentRepositories;
+            $first = array_shift($rest);
+            $additionalNote = sprintf(' or setup %s.', join(' or ', $rest));
+
+            return new Health(
+                sprintf(
+                    'No content repository is setup. Please run <code>{{flowCommand}} cr:setup%s</code>%s',
+                    $environment->isSafeToLeakTechnicalDetails() ? ' --content-repository ' . $first : '',
+                    $environment->isSafeToLeakTechnicalDetails() && count($rest) ? $additionalNote : ''
+                ),
+                Status::ERROR(),
+            );
+        }
+
+        if (count($unSetupContentRepositories)) {
+            $rest = $unSetupContentRepositories;
+            $first = array_shift($rest);
+            $additionalNote = sprintf(' or setup %s.', join(' or ', $rest));
+
+            return new Health(
+                sprintf(
+                    '%s Please run <code>{{flowCommand}} cr:setup%s</code>%s',
+                    count($unSetupContentRepositories) > 1 ? 'Some content repositories are not setup.' : 'A content repository is not setup.',
+                    $environment->isSafeToLeakTechnicalDetails() ? ' --content-repository ' . $first : '',
+                    $environment->isSafeToLeakTechnicalDetails() && count($rest) ? $additionalNote : ''
+                ),
+                Status::WARNING(),
+            );
         }
 
         // TODO check if `cr:setup` needs to be rerun, to "migrate" projections?
@@ -69,7 +99,7 @@ class CrHealthcheck implements HealthcheckInterface
             );
         }
 
-        $additionalNote = sprintf('(%s) ', join(', ', $crIdentifiers));
+        $additionalNote = sprintf('(%s) ', join(' and ', $crIdentifiers));
         return new Health(
             sprintf('All content repositories %sare setup.', $environment->isSafeToLeakTechnicalDetails() ? $additionalNote : ''),
             Status::OK(),
