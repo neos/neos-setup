@@ -15,7 +15,7 @@ use Neos\Setup\Domain\Status;
 class CrHealthcheck implements HealthcheckInterface
 {
     public function __construct(
-        private Connection           $dbalConnection,
+        private Connection $dbalConnection,
         private ConfigurationManager $configurationManager
     ) {
     }
