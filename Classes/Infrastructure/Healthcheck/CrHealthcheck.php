@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Neos\Neos\Setup\Infrastructure\Healthcheck;
 
-use Doctrine\DBAL\Connection;
-use Doctrine\DBAL\Schema\AbstractSchemaManager;
+use Neos\ContentRepository\Core\SharedModel\ContentRepository\ContentRepositoryId;
+use Neos\ContentRepositoryRegistry\ContentRepositoryRegistry;
 use Neos\Flow\Configuration\ConfigurationManager;
 use Neos\Setup\Domain\Health;
 use Neos\Setup\Domain\HealthcheckEnvironment;
@@ -15,8 +15,8 @@ use Neos\Setup\Domain\Status;
 class CrHealthcheck implements HealthcheckInterface
 {
     public function __construct(
-        private Connection $dbalConnection,
-        private ConfigurationManager $configurationManager
+        private ConfigurationManager $configurationManager,
+        private ContentRepositoryRegistry $contentRepositoryRegistry
     ) {
     }
 
@@ -27,8 +27,7 @@ class CrHealthcheck implements HealthcheckInterface
 
     public function execute(HealthcheckEnvironment $environment): Health
     {
-        // TODO: Implement execute() method.
-
+        // todo add contentRepositoryRegistry::getIds() ?
         $crIdentifiers = array_keys(
             $this->configurationManager
                 ->getConfiguration(ConfigurationManager::CONFIGURATION_TYPE_SETTINGS, 'Neos.ContentRepositoryRegistry.contentRepositories') ?? []
@@ -41,19 +40,12 @@ class CrHealthcheck implements HealthcheckInterface
             );
         }
 
-        $schemaManager = $this->dbalConnection->getSchemaManager();
-        if (!$schemaManager instanceof AbstractSchemaManager) {
-            throw new \RuntimeException('Failed to retrieve Schema Manager', 1691250062732);
-        }
-
-        $existingTableNames = $schemaManager->listTableNames();
-
         $unSetupContentRepositories = [];
         foreach ($crIdentifiers as $crIdentifier) {
-            $eventTableName = sprintf('cr_%s_events', $crIdentifier);
+            $cr = $this->contentRepositoryRegistry->get(ContentRepositoryId::fromString($crIdentifier));
 
-            $isCrSetup = in_array($eventTableName, $existingTableNames, true);
-            if (!$isCrSetup) {
+            $crStatus = $cr->status();
+            if (!$crStatus->isOk()) {
                 $unSetupContentRepositories[] = $crIdentifier;
             }
         }
@@ -61,13 +53,13 @@ class CrHealthcheck implements HealthcheckInterface
         if (count($crIdentifiers) === count($unSetupContentRepositories)) {
             $rest = $unSetupContentRepositories;
             $first = array_shift($rest);
-            $additionalNote = sprintf(' or setup %s.', join(' or ', $rest));
+            $additionalNote = count($rest) ? sprintf(' or with %s.', join(' or ', $rest)) : '';
 
             return new Health(
                 sprintf(
-                    'No content repository is setup. Please run <code>{{flowCommand}} cr:setup%s</code>%s',
+                    '<code>{{flowCommand}} cr:status</code> reported a problem. Please run <code>{{flowCommand}} cr:setup%s</code>%s',
                     $environment->isSafeToLeakTechnicalDetails() ? ' --content-repository ' . $first : '',
-                    $environment->isSafeToLeakTechnicalDetails() && count($rest) ? $additionalNote : ''
+                    $environment->isSafeToLeakTechnicalDetails() ? $additionalNote : ''
                 ),
                 Status::ERROR(),
             );
@@ -76,20 +68,18 @@ class CrHealthcheck implements HealthcheckInterface
         if (count($unSetupContentRepositories)) {
             $rest = $unSetupContentRepositories;
             $first = array_shift($rest);
-            $additionalNote = sprintf(' or setup %s.', join(' or ', $rest));
+            $additionalNote = count($rest) ? sprintf(' or with %s.', join(' or ', $rest)) : '';
 
             return new Health(
                 sprintf(
                     '%s Please run <code>{{flowCommand}} cr:setup%s</code>%s',
-                    count($unSetupContentRepositories) > 1 ? 'Some content repositories are not setup.' : 'A content repository is not setup.',
+                    '<code>{{flowCommand}} cr:status</code> reported a problem.',
                     $environment->isSafeToLeakTechnicalDetails() ? ' --content-repository ' . $first : '',
-                    $environment->isSafeToLeakTechnicalDetails() && count($rest) ? $additionalNote : ''
+                    $environment->isSafeToLeakTechnicalDetails() ? $additionalNote : ''
                 ),
                 Status::WARNING(),
             );
         }
-
-        // TODO check if `cr:setup` needs to be rerun, to "migrate" projections?
 
         if (count($crIdentifiers) === 1) {
             return new Health(
