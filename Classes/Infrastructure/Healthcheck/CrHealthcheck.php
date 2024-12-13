@@ -4,9 +4,8 @@ declare(strict_types=1);
 
 namespace Neos\Neos\Setup\Infrastructure\Healthcheck;
 
-use Neos\ContentRepository\Core\SharedModel\ContentRepository\ContentRepositoryId;
 use Neos\ContentRepositoryRegistry\ContentRepositoryRegistry;
-use Neos\Flow\Configuration\ConfigurationManager;
+use Neos\ContentRepositoryRegistry\Exception\InvalidConfigurationException;
 use Neos\Setup\Domain\Health;
 use Neos\Setup\Domain\HealthcheckEnvironment;
 use Neos\Setup\Domain\HealthcheckInterface;
@@ -15,7 +14,6 @@ use Neos\Setup\Domain\Status;
 class CrHealthcheck implements HealthcheckInterface
 {
     public function __construct(
-        private ConfigurationManager $configurationManager,
         private ContentRepositoryRegistry $contentRepositoryRegistry
     ) {
     }
@@ -27,10 +25,8 @@ class CrHealthcheck implements HealthcheckInterface
 
     public function execute(HealthcheckEnvironment $environment): Health
     {
-        // todo add contentRepositoryRegistry::getIds() ?
-        $crIdentifiers = array_keys(
-            $this->configurationManager
-                ->getConfiguration(ConfigurationManager::CONFIGURATION_TYPE_SETTINGS, 'Neos.ContentRepositoryRegistry.contentRepositories') ?? []
+        $crIdentifiers = iterator_to_array(
+            $this->contentRepositoryRegistry->getContentRepositoryIds()
         );
 
         if (count($crIdentifiers) === 0) {
@@ -42,8 +38,14 @@ class CrHealthcheck implements HealthcheckInterface
 
         $unSetupContentRepositories = [];
         foreach ($crIdentifiers as $crIdentifier) {
-            $cr = $this->contentRepositoryRegistry->get(ContentRepositoryId::fromString($crIdentifier));
-
+            try {
+                $cr = $this->contentRepositoryRegistry->get($crIdentifier);
+            } catch (InvalidConfigurationException $e) {
+                return new Health(
+                    sprintf('Content repository %s is invalid configured%s', $crIdentifier->value, $environment->isSafeToLeakTechnicalDetails() ? ': ' . $e->getMessage() : ''),
+                    Status::ERROR(),
+                );
+            }
             $crStatus = $cr->status();
             if (!$crStatus->isOk()) {
                 $unSetupContentRepositories[] = $crIdentifier;
