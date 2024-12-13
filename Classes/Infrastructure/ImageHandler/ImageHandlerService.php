@@ -49,6 +49,7 @@ class ImageHandlerService
     public function __construct()
     {
         //
+        // FIXME: It seems there is this hack and in the image factory there is a hack too now (: https://github.com/neos/imagine/pull/11
         // Hack. We instantiate the unproxied class without injected settings.
         // This is to allow to still reconfigure the image driver, even if it is disabled.
         // The "driver" Gd for Imagine must be enabled by settings, check Neos.Imagine.enabledDrivers. Or use ./flow setup:imagehandler
