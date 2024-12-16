@@ -4,8 +4,13 @@ declare(strict_types=1);
 
 namespace Neos\Neos\Setup\Infrastructure\Healthcheck;
 
+use Neos\ContentRepository\Core\Projection\ProjectionStatusType;
+use Neos\ContentRepository\Core\Service\ContentRepositoryMaintainer;
+use Neos\ContentRepository\Core\Service\ContentRepositoryMaintainerFactory;
+use Neos\ContentRepository\Core\Subscription\ProjectionSubscriptionStatus;
 use Neos\ContentRepositoryRegistry\ContentRepositoryRegistry;
 use Neos\ContentRepositoryRegistry\Exception\InvalidConfigurationException;
+use Neos\EventStore\Model\EventStore\StatusType;
 use Neos\Setup\Domain\Health;
 use Neos\Setup\Domain\HealthcheckEnvironment;
 use Neos\Setup\Domain\HealthcheckInterface;
@@ -39,15 +44,17 @@ class CrHealthcheck implements HealthcheckInterface
         $unSetupContentRepositories = [];
         foreach ($crIdentifiers as $crIdentifier) {
             try {
-                $cr = $this->contentRepositoryRegistry->get($crIdentifier);
+                $crMaintainer = $this->contentRepositoryRegistry->buildService(
+                    $crIdentifier,
+                    new ContentRepositoryMaintainerFactory()
+                );
             } catch (InvalidConfigurationException $e) {
                 return new Health(
                     sprintf('Content repository %s is invalid configured%s', $crIdentifier->value, $environment->isSafeToLeakTechnicalDetails() ? ': ' . $e->getMessage() : ''),
                     Status::ERROR(),
                 );
             }
-            $crStatus = $cr->status();
-            if (!$crStatus->isOk()) {
+            if ($this->isContentRepositorySetup($crMaintainer) === false) {
                 $unSetupContentRepositories[] = $crIdentifier;
             }
         }
@@ -95,5 +102,21 @@ class CrHealthcheck implements HealthcheckInterface
             sprintf('All content repositories %sare setup.', $environment->isSafeToLeakTechnicalDetails() ? $additionalNote : ''),
             Status::OK(),
         );
+    }
+
+    private function isContentRepositorySetup(ContentRepositoryMaintainer $contentRepositoryMaintainer): bool
+    {
+        $status = $contentRepositoryMaintainer->status();
+        if ($status->eventStoreStatus->type !== StatusType::OK) {
+            return false;
+        }
+        foreach ($status->subscriptionStatus as $status) {
+            if ($status instanceof ProjectionSubscriptionStatus) {
+                if ($status->setupStatus->type !== ProjectionStatusType::OK) {
+                    return false;
+                }
+            }
+        }
+        return true;
     }
 }
