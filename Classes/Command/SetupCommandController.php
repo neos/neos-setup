@@ -19,6 +19,7 @@ use Neos\Flow\Core\Bootstrap;
 use Neos\Neos\Setup\Infrastructure\ImageHandler\ImageHandlerService;
 use Neos\Utility\Arrays;
 use Symfony\Component\Yaml\Yaml;
+use Neos\Utility\Files;
 
 class SetupCommandController extends CommandController
 {
@@ -92,6 +93,7 @@ class SetupCommandController extends CommandController
             $previousSettings = [];
         }
         $newSettings = Arrays::setValueByPath($previousSettings, $path, $settings);
+        Files::createDirectoryRecursively(dirname($filename));
         file_put_contents($filename, YAML::dump($newSettings, 10, 2));
         return YAML::dump(Arrays::setValueByPath([],$path, $settings), 10, 2);
     }
