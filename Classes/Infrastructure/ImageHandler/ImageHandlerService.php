@@ -18,23 +18,7 @@ use Neos\Imagine\ImagineFactory;
 
 class ImageHandlerService
 {
-    /**
-     * @Flow\InjectConfiguration(path="supportedImageHandlersByPreference")
-     * @var array<int, array{driverName: string, description: string}>
-     */
-    protected array $supportedImageHandlersByPreference;
 
-    /**
-     * @Flow\InjectConfiguration(path="requiredImageFormats")
-     * @var string[]
-     */
-    protected array $requiredImageFormats;
-
-    /**
-     * @Flow\InjectConfiguration(path="enabledDrivers", package="Neos.Imagine")
-     * @var array<string, bool>
-     */
-    protected array $enabledDrivers;
 
     /**
      * @var ImagineFactory
@@ -42,9 +26,17 @@ class ImageHandlerService
     protected $imagineFactory;
 
     /**
-     * @var array<int,ImageHandler>
+     * Array of ImageHandlerDescriptor objects converted from YAML configuration
+     * The ordering is from "least-fitting" to "best-fitting"
+     * @var ImageHandlerDescriptor[]
      */
-    protected array $availableImageHandlers;
+    private readonly array $supportedImageHandlersByPreference;
+
+    private const array REQUIRED_IMAGE_FORMATS = [
+        'jpg' => 'resource://Neos.Neos/Private/Installer/TestImages/Test.jpg',
+        'gif' => 'resource://Neos.Neos/Private/Installer/TestImages/Test.gif',
+        'png' => 'resource://Neos.Neos/Private/Installer/TestImages/Test.png',
+    ];
 
     public function __construct()
     {
@@ -57,66 +49,100 @@ class ImageHandlerService
         //
         class_exists(ImagineFactory::class);
         $this->imagineFactory = new (ImagineFactory::class . '_Original')();
+
+
+        // sorted from worst-fitting to best-fitting
+        $this->supportedImageHandlersByPreference = [
+            new ImageHandlerDescriptor(
+                driverName: 'Gd',
+                description: 'GD Library - generally slow, not recommended in production',
+                requiredPhpExtension: 'gd',
+                requiredPhpConfiguration: [],
+            ),
+            new ImageHandlerDescriptor(
+                driverName: 'Gmagick',
+                description: '- Gmagick php module',
+                requiredPhpExtension: 'gmagick',
+                requiredPhpConfiguration: [],
+            ),
+            // Imagick seems to be better maintained on PECL than gmagick, that's why we prefer to use it over gmagick.
+            new ImageHandlerDescriptor(
+                driverName: 'Imagick',
+                description: '- ImageMagick php module',
+                requiredPhpExtension: 'imagick',
+                requiredPhpConfiguration: [],
+            ),
+            new ImageHandlerDescriptor(
+                driverName: 'Vips',
+                description: '(legacy Extension Mode) - fast and memory efficient, needs rokka/imagine-vips + jcupitt/vips:^1.0',
+                requiredPhpExtension: 'vips',
+                requiredPhpConfiguration: [],
+            ),
+            new ImageHandlerDescriptor(
+                driverName: 'Vips',
+                description: '(future-proof FFI mode) - fast and memory efficient, needs rokka/imagine-vips and FFI enabled',
+                // no PHP Extension needed
+                requiredPhpExtension: '',
+                requiredPhpConfiguration: [
+                    'ffi.enable' => 'true',
+                    // from https://github.com/libvips/php-vips?tab=readme-ov-file:
+                    //    Finally, on php 8.3 and later you need to disable stack overflow tests.
+                    //    php-vips executes FFI callbacks off the main thread and this confuses those checks, at least in php 8.3.0.
+                    'zend.max_allowed_stack_size' => '-1',
+                ],
+            ),
+        ];
     }
 
-    /**
-     * Return all Imagine drivers that support the loading of the required images
-     *
-     * Ignoring the configuration `Neos.Imagine.enabledDrivers`
-     *
-     * @return array<int,ImageHandler>
-     */
-    public function getAvailableImageHandlers(): array
+    public function determineAvailabilityForImageHandlers(): ImageHandlerDiagnosticsCollection
     {
-        if (isset($this->availableImageHandlers)) {
-            return $this->availableImageHandlers;
-        }
-        $availableImageHandlers = [];
-        foreach ($this->supportedImageHandlersByPreference as [
-            'driverName' => $driverName,
-            'description' => $description
-        ]) {
-            if (\extension_loaded(strtolower($driverName)) && $this->imagineFactory->isDriverAvailable(ucfirst($driverName))) {
-                $unsupportedFormats = $this->findUnsupportedImageFormats($driverName);
-                if (\count($unsupportedFormats) === 0) {
-                    $availableImageHandlers[] = new ImageHandler(
-                        driverName: $driverName,
-                        description: $description
-                    );
+        $imageHandlerDiagnostics = [];
+
+        foreach ($this->supportedImageHandlersByPreference as $supportedImageHandler) {
+            $unsupportedBecause = [];
+            if ($supportedImageHandler->requiredPhpExtension != '' && !\extension_loaded($supportedImageHandler->requiredPhpExtension)) {
+                $unsupportedBecause[] = 'PHP Extension "' . $supportedImageHandler->requiredPhpExtension . '" is not loaded.';
+            }
+            if (!$this->imagineFactory->isDriverAvailable(ucfirst($supportedImageHandler->driverName))) {
+                $unsupportedBecause[] = 'Imagine driver "' . $supportedImageHandler->driverName . '" is not available.';
+            }
+
+            foreach ($supportedImageHandler->requiredPhpConfiguration as $key => $expectedValue) {
+                $actual = ini_get($key);
+                // Some 1/true juggling for getting the types match, because ffi.enabled=true gets parsed to 1.
+                if ($expectedValue === 'true' && $actual === '1') {
+                    $actual = 'true';
+                }
+                if ($expectedValue !== $actual) {
+                    $iniPath = php_ini_loaded_file();
+                    $unsupportedBecause[] = 'PHP configuration "' . $key . '" is not set to "' . $expectedValue . '", but to "' . ini_get($key) . '" instead.' . PHP_EOL . sprintf('        echo %s=%s >> %s', $key, $expectedValue, $iniPath);
+
                 }
             }
+
+            if (\count($unsupportedBecause) === 0) {
+                $this->findUnsupportedImageFormats($supportedImageHandler->driverName, $unsupportedBecause);
+            }
+
+            $imageHandlerDiagnostics[] = new ImageHandlerDiagnostics(
+                descriptor: $supportedImageHandler,
+                isReady: count($unsupportedBecause) === 0,
+                statusDetails: $unsupportedBecause,
+            );
         }
-        return $this->availableImageHandlers = $availableImageHandlers;
+        return new ImageHandlerDiagnosticsCollection($imageHandlerDiagnostics);
     }
 
-    public function getPreferredImageHandler(): ImageHandler
-    {
-        $availableImageHandlers = $this->getAvailableImageHandlers();
-        return reset($availableImageHandlers)
-            ?: throw new \RuntimeException('No supported image handler found.');
-    }
-
-    public function isDriverEnabledInConfiguration(string $driverName): bool
-    {
-        return (bool)($this->enabledDrivers[$driverName] ?? false);
-    }
-
-    /**
-     * @param string $driver
-     * @return array Not supported image formats
-     */
-    private function findUnsupportedImageFormats(string $driver): array
+    private function findUnsupportedImageFormats(string $driver, array &$unsupportedBecause): void
     {
         $imagine = $this->imagineFactory->createDriver(ucfirst($driver));
-        $unsupportedFormats = [];
 
-        foreach ($this->requiredImageFormats as $imageFormat => $testFile) {
+        foreach (self::REQUIRED_IMAGE_FORMATS as $imageFormat => $testFile) {
             try {
                 $imagine->load(file_get_contents($testFile));
             } /** @noinspection BadExceptionsProcessingInspection */ catch (\Exception $exception) {
-                $unsupportedFormats[] = $imageFormat;
+                $unsupportedBecause[] = 'Image format "' . $imageFormat . '" not supported: ' . $exception->getMessage();
             }
         }
-        return $unsupportedFormats;
     }
 }
