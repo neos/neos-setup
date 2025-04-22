@@ -13,8 +13,9 @@ class ImageHandlerHealthcheck implements HealthcheckInterface
 {
     public function __construct(
         private ConfigurationManager $configurationManager,
-        private ImageHandlerService $imageHandlerService,
-    ) {
+        private ImageHandlerService  $imageHandlerService,
+    )
+    {
     }
 
     public function getTitle(): string
@@ -24,11 +25,11 @@ class ImageHandlerHealthcheck implements HealthcheckInterface
 
     public function execute(HealthcheckEnvironment $environment): Health
     {
-        $availableImageHandlers = $this->imageHandlerService->getAvailableImageHandlers();
+        $imageHandlers = $this->imageHandlerService->determineAvailabilityForImageHandlers();
 
-        if (count($availableImageHandlers) === 0) {
+        if ($imageHandlers->readyCount() === 0) {
             $enableGdOnWindowsHelpText = $environment->executionEnvironment->isWindows
-                ? ' To enabled Gd for basic image driver support during development, uncomment (remove the <em>;</em>) <em>;extension=gd</em> in your php.ini.'
+                ? ' To enable Gd for basic image driver support during development, uncomment <em>;extension=gd</em> in your php.ini (remove the <em>;</em>).'
                 : '';
 
             return new Health(sprintf('No supported image handler found.%s', $enableGdOnWindowsHelpText), Status::ERROR());
@@ -42,30 +43,30 @@ class ImageHandlerHealthcheck implements HealthcheckInterface
         if (!$configuredDriver) {
             // should never happen, as it defaults to GD
             return new Health(<<<'MSG'
-            No image driver in <em>Neos.Imagine.driver</em> configured. For configuration you can use <code>{{flowCommand}} setup:imagehandler</code>
+                No image driver in <em>Neos.Imagine.driver</em> configured. Run <code>{{flowCommand}} setup:imagehandler</code> to configure one.
             MSG, Status::ERROR());
         }
 
-        if ($this->imageHandlerService->isDriverEnabledInConfiguration($configuredDriver) === false) {
-            return new Health(sprintf('The "driver" %s for Imagine must be enabled by settings, check Neos.Imagine.enabledDrivers. Or use <code>{{flowCommand}} setup:imagehandler</code>', $configuredDriver), Status::ERROR());
+        if ($imageHandlers->isReady($configuredDriver) === false) {
+            return new Health(<<<MSG
+                Currently, <em>Neos.Imagine.driver={$configuredDriver}</em> is configured, but your system does not meet the prerequisites. Run <code>{{flowCommand}} setup:imagehandler</code> for in-depth diagnostics and fix.
+            MSG, Status::ERROR());
         }
 
-        $preferredImageHandler = $this->imageHandlerService->getPreferredImageHandler();
-
-        if ($configuredDriver !== $preferredImageHandler->driverName) {
-            return new Health(<<<'MSG'
-            You can use a more optional image driver than in <em>Neos.Imagine.driver</em> configured. For configuration you can use <code>{{flowCommand}} setup:imagehandler</code>
+        if ($configuredDriver !== $imageHandlers->preferredDriverName()) {
+            return new Health(<<<MSG
+                Currently, <em>Neos.Imagine.driver={$configuredDriver}</em> is configured, but for your system, <em>{$imageHandlers->preferredDriverName()}</em> might be more optimal. Run <code>{{flowCommand}} setup:imagehandler</code> for configuration.
             MSG, Status::WARNING());
         }
 
         if ($configuredDriver === 'Gd') {
             return new Health(<<<'MSG'
-            Using GD in production environment is not recommended as it has some issues and can easily lead to blank pages due to memory exhaustion.
+                Using GD in production environment is not recommended as it has some issues and can easily lead to blank pages due to memory exhaustion. Run <code>{{flowCommand}} setup:imagehandler</code> to reconfigure image handling.
             MSG, Status::WARNING());
         }
 
-        return new Health(<<<'MSG'
-        The image driver is correctly setup
+        return new Health(<<<MSG
+            The image driver "{$configuredDriver}" is correctly configured and is the preferred driver for your system.
         MSG, Status::OK());
     }
 }
