@@ -18,22 +18,25 @@ use Neos\Imagine\ImagineFactory;
 
 class ImageHandlerService
 {
-    /**
-     * @Flow\InjectConfiguration(path="supportedImageHandlersByPreference")
-     * @var array<int, array{driverName: string, description: string, requiredPhpExtension: string|null}>
-     */
-    protected readonly array $supportedImageHandlersByPreference;
 
-    /**
-     * @Flow\InjectConfiguration(path="requiredImageFormats")
-     * @var string[]
-     */
-    protected array $requiredImageFormats;
 
     /**
      * @var ImagineFactory
      */
     protected $imagineFactory;
+
+    /**
+     * Array of ImageHandlerDescriptor objects converted from YAML configuration
+     * The ordering is from "least-fitting" to "best-fitting"
+     * @var ImageHandlerDescriptor[]
+     */
+    private readonly array $supportedImageHandlersByPreference;
+
+    private const array REQUIRED_IMAGE_FORMATS = [
+        'jpg' => 'resource://Neos.Neos/Private/Installer/TestImages/Test.jpg',
+        'gif' => 'resource://Neos.Neos/Private/Installer/TestImages/Test.gif',
+        'png' => 'resource://Neos.Neos/Private/Installer/TestImages/Test.png',
+    ];
 
     public function __construct()
     {
@@ -45,30 +48,56 @@ class ImageHandlerService
         //
         class_exists(ImagineFactory::class);
         $this->imagineFactory = new (ImagineFactory::class . '_Original')();
-    }
 
-    /**
-     * @return ImageHandlerDescriptor[]
-     */
-    private function readSupportedImageHandlers(): array
-    {
-        $imageHandlers = [];
-        foreach ($this->supportedImageHandlersByPreference as $c) {
-            $imageHandlers[] = new ImageHandlerDescriptor(
-                driverName: $c['driverName'],
-                description: $c['description'],
-                requiredPhpExtension: $c['requiredPhpExtension'] ?? '',
-                requiredPhpConfiguration: $c['requiredPhpConfiguration'] ?? [],
-            );
-        }
-        return $imageHandlers;
+
+        // sorted from worst-fitting to best-fitting
+        $this->supportedImageHandlersByPreference = [
+            new ImageHandlerDescriptor(
+                driverName: 'Gd',
+                description: 'GD Library - generally slow, not recommended in production',
+                requiredPhpExtension: 'gd',
+                requiredPhpConfiguration: [],
+            ),
+            new ImageHandlerDescriptor(
+                driverName: 'Gmagick',
+                description: '- Gmagick php module',
+                requiredPhpExtension: 'gmagick',
+                requiredPhpConfiguration: [],
+            ),
+            // Imagick seems to be better maintained on PECL than gmagick, that's why we prefer to use it over gmagick.
+            new ImageHandlerDescriptor(
+                driverName: 'Imagick',
+                description: '- ImageMagick php module',
+                requiredPhpExtension: 'imagick',
+                requiredPhpConfiguration: [],
+            ),
+            new ImageHandlerDescriptor(
+                driverName: 'Vips',
+                description: '(legacy Extension Mode) - fast and memory efficient, needs rokka/imagine-vips + jcupitt/vips:^1.0',
+                requiredPhpExtension: 'vips',
+                requiredPhpConfiguration: [],
+            ),
+            new ImageHandlerDescriptor(
+                driverName: 'Vips',
+                description: '(future-proof FFI mode) - fast and memory efficient, needs rokka/imagine-vips and FFI enabled',
+                // no PHP Extension needed
+                requiredPhpExtension: '',
+                requiredPhpConfiguration: [
+                    'ffi.enable' => 'true',
+                    // from https://github.com/libvips/php-vips?tab=readme-ov-file:
+                    //    Finally, on php 8.3 and later you need to disable stack overflow tests.
+                    //    php-vips executes FFI callbacks off the main thread and this confuses those checks, at least in php 8.3.0.
+                    'zend.max_allowed_stack_size' => '-1',
+                ],
+            ),
+        ];
     }
 
     public function determineAvailabilityForImageHandlers(): ImageHandlerDiagnosticsCollection
     {
         $imageHandlerDiagnostics = [];
 
-        foreach ($this->readSupportedImageHandlers() as $supportedImageHandler) {
+        foreach ($this->supportedImageHandlersByPreference as $supportedImageHandler) {
             $unsupportedBecause = [];
             if ($supportedImageHandler->requiredPhpExtension != '' && !\extension_loaded($supportedImageHandler->requiredPhpExtension)) {
                 $unsupportedBecause[] = 'PHP Extension "' . $supportedImageHandler->requiredPhpExtension . '" is not loaded.';
@@ -107,7 +136,7 @@ class ImageHandlerService
     {
         $imagine = $this->imagineFactory->createDriver(ucfirst($driver));
 
-        foreach ($this->requiredImageFormats as $imageFormat => $testFile) {
+        foreach (self::REQUIRED_IMAGE_FORMATS as $imageFormat => $testFile) {
             try {
                 $imagine->load(file_get_contents($testFile));
             } /** @noinspection BadExceptionsProcessingInspection */ catch (\Exception $exception) {
