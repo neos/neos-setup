@@ -20,9 +20,9 @@ class ImageHandlerService
 {
     /**
      * @Flow\InjectConfiguration(path="supportedImageHandlersByPreference")
-     * @var array<int, array{driverName: string, description: string}>
+     * @var array<int, array{driverName: string, description: string, requiredPhpExtension: string|null}>
      */
-    protected array $supportedImageHandlersByPreference;
+    protected readonly array $supportedImageHandlersByPreference;
 
     /**
      * @Flow\InjectConfiguration(path="requiredImageFormats")
@@ -31,20 +31,9 @@ class ImageHandlerService
     protected array $requiredImageFormats;
 
     /**
-     * @Flow\InjectConfiguration(path="enabledDrivers", package="Neos.Imagine")
-     * @var array<string, bool>
-     */
-    protected array $enabledDrivers;
-
-    /**
      * @var ImagineFactory
      */
     protected $imagineFactory;
-
-    /**
-     * @var array<int,ImageHandler>
-     */
-    protected array $availableImageHandlers;
 
     public function __construct()
     {
@@ -59,63 +48,71 @@ class ImageHandlerService
     }
 
     /**
-     * Return all Imagine drivers that support the loading of the required images
-     *
-     * Ignoring the configuration `Neos.Imagine.enabledDrivers`
-     *
-     * @return array<int,ImageHandler>
+     * @return ImageHandlerDescriptor[]
      */
-    public function getAvailableImageHandlers(): array
+    private function readSupportedImageHandlers(): array
     {
-        if (isset($this->availableImageHandlers)) {
-            return $this->availableImageHandlers;
+        $imageHandlers = [];
+        foreach ($this->supportedImageHandlersByPreference as $c) {
+            $imageHandlers[] = new ImageHandlerDescriptor(
+                driverName: $c['driverName'],
+                description: $c['description'],
+                requiredPhpExtension: $c['requiredPhpExtension'] ?? '',
+                requiredPhpConfiguration: $c['requiredPhpConfiguration'] ?? [],
+            );
         }
-        $availableImageHandlers = [];
-        foreach ($this->supportedImageHandlersByPreference as [
-            'driverName' => $driverName,
-            'description' => $description
-        ]) {
-            if (\extension_loaded(strtolower($driverName)) && $this->imagineFactory->isDriverAvailable(ucfirst($driverName))) {
-                $unsupportedFormats = $this->findUnsupportedImageFormats($driverName);
-                if (\count($unsupportedFormats) === 0) {
-                    $availableImageHandlers[] = new ImageHandler(
-                        driverName: $driverName,
-                        description: $description
-                    );
+        return $imageHandlers;
+    }
+
+    public function determineAvailabilityForImageHandlers(): ImageHandlerDiagnosticsCollection
+    {
+        $imageHandlerDiagnostics = [];
+
+        foreach ($this->readSupportedImageHandlers() as $supportedImageHandler) {
+            $unsupportedBecause = [];
+            if ($supportedImageHandler->requiredPhpExtension != '' && !\extension_loaded($supportedImageHandler->requiredPhpExtension)) {
+                $unsupportedBecause[] = 'PHP Extension "' . $supportedImageHandler->requiredPhpExtension . '" is not loaded.';
+            }
+            if (!$this->imagineFactory->isDriverAvailable(ucfirst($supportedImageHandler->driverName))) {
+                $unsupportedBecause[] = 'Imagine driver "' . $supportedImageHandler->driverName . '" is not available.';
+            }
+
+            foreach ($supportedImageHandler->requiredPhpConfiguration as $key => $expectedValue) {
+                $actual = ini_get($key);
+                // Some 1/true juggling for getting the types match, because ffi.enabled=true gets parsed to 1.
+                if ($expectedValue === 'true' && $actual === '1') {
+                    $actual = 'true';
+                }
+                if ($expectedValue !== $actual) {
+                    $iniPath = php_ini_loaded_file();
+                    $unsupportedBecause[] = 'PHP configuration "' . $key . '" is not set to "' . $expectedValue . '", but to "' . ini_get($key) . '" instead.' . PHP_EOL . sprintf('        echo %s=%s >> %s', $key, $expectedValue, $iniPath);
+
                 }
             }
+
+            if (\count($unsupportedBecause) === 0) {
+                $this->findUnsupportedImageFormats($supportedImageHandler->driverName, $unsupportedBecause);
+            }
+
+            $imageHandlerDiagnostics[] = new ImageHandlerDiagnostics(
+                descriptor: $supportedImageHandler,
+                isReady: count($unsupportedBecause) === 0,
+                statusDetails: $unsupportedBecause,
+            );
         }
-        return $this->availableImageHandlers = $availableImageHandlers;
+        return new ImageHandlerDiagnosticsCollection($imageHandlerDiagnostics);
     }
 
-    public function getPreferredImageHandler(): ImageHandler
-    {
-        $availableImageHandlers = $this->getAvailableImageHandlers();
-        return reset($availableImageHandlers)
-            ?: throw new \RuntimeException('No supported image handler found.');
-    }
-
-    public function isDriverEnabledInConfiguration(string $driverName): bool
-    {
-        return (bool)($this->enabledDrivers[$driverName] ?? false);
-    }
-
-    /**
-     * @param string $driver
-     * @return array Not supported image formats
-     */
-    private function findUnsupportedImageFormats(string $driver): array
+    private function findUnsupportedImageFormats(string $driver, array &$unsupportedBecause): void
     {
         $imagine = $this->imagineFactory->createDriver(ucfirst($driver));
-        $unsupportedFormats = [];
 
         foreach ($this->requiredImageFormats as $imageFormat => $testFile) {
             try {
                 $imagine->load(file_get_contents($testFile));
             } /** @noinspection BadExceptionsProcessingInspection */ catch (\Exception $exception) {
-                $unsupportedFormats[] = $imageFormat;
+                $unsupportedBecause[] = 'Image format "' . $imageFormat . '" not supported: ' . $exception->getMessage();
             }
         }
-        return $unsupportedFormats;
     }
 }

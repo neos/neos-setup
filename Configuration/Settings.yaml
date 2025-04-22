@@ -13,22 +13,35 @@ Neos:
 
   Neos:
     Setup:
-      #
-      # Imagine drivers that are supported
-      #
+      # ordering: from "least-fitting" to "best-fitting". We will suggest the best matching one LAST in the list.
       supportedImageHandlersByPreference:
         -
           driverName: 'Gd'
+          requiredPhpExtension: 'gd'
           description: 'GD Library - generally slow, not recommended in production'
         -
           driverName: 'Gmagick'
-          description: 'Gmagick php module'
+          requiredPhpExtension: 'gmagick'
+          description: '- Gmagick php module'
         -
+          # Imagick seems to be better maintained on PECL than gmagick, that's why we prefer to use it over gmagick.
           driverName: 'Imagick'
-          description: 'ImageMagick php module'
+          requiredPhpExtension: 'imagick'
+          description: '- ImageMagick php module'
         -
           driverName: 'Vips'
-          description: 'Vips php module - fast and memory efficient, needs rokka/imagine-vips'
+          requiredPhpExtension: 'vips'
+          description: '(legacy Extension Mode) - fast and memory efficient, needs rokka/imagine-vips + jcupitt/vips:^1.0'
+        -
+          driverName: 'Vips'
+          # no PHP Extension needed, but we need rokka/imagine-vips
+          requiredPhpConfiguration:
+            'ffi.enable': 'true'
+            # from https://github.com/libvips/php-vips?tab=readme-ov-file:
+            #    Finally, on php 8.3 and later you need to disable stack overflow tests.
+            #    php-vips executes FFI callbacks off the main thread and this confuses those checks, at least in php 8.3.0.
+            'zend.max_allowed_stack_size': '-1'
+          description: '(future-proof FFI mode) - fast and memory efficient, needs rokka/imagine-vips and FFI enabled'
 
       #
       # Images to verify that the format can be handled

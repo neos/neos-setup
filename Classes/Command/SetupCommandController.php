@@ -30,50 +30,75 @@ class SetupCommandController extends CommandController
 
     public function imageHandlerCommand(string $driver = null): void
     {
-        $availableImageHandlers = $this->imageHandlerService->getAvailableImageHandlers();
+        $imageHandlers = $this->imageHandlerService->determineAvailabilityForImageHandlers();
 
-        if (count($availableImageHandlers) === 0) {
+        $this->outputLine('<info>%d handler(s) ready</info>, <comment>%d unavailable</comment>:', [$imageHandlers->readyCount(), $imageHandlers->unavailableCount()]);
+        foreach ($imageHandlers as $h) {
+            if ($h->isReady) {
+                $this->outputLine('  - ✅ <info>%s</info> %s', [$h->descriptor->driverName, $h->descriptor->description]);
+            } else {
+                $this->outputLine('  - <comment>%s</comment> %s', [$h->descriptor->driverName, $h->descriptor->description]);
+            }
+
+            foreach ($h->statusDetails as $detail) {
+                $this->outputLine('    - %s', [$detail]);
+            }
+        }
+
+        $this->outputLine('');
+
+        if ($imageHandlers->readyCount() === 0) {
             $enableGdOnWindowsHelpText = PHP_OS_FAMILY === 'Windows'
-                ? ' To enabled Gd for basic image driver support during development, uncomment (remove the <em>;</em>) <em>;extension=gd</em> in your php.ini.'
+                ? ' To enable Gd for basic image driver support during development, uncomment <em>;extension=gd</em> in your php.ini (remove the <em>;</em>).'
                 : '';
 
             $this->outputLine(
-                sprintf(
-                    'No supported image handler found.%s',
+                'No available image handler found.%s',
+                [
                     $enableGdOnWindowsHelpText
-                )
+                ]
             );
             $this->quit(1);
         }
 
-        $availableDriversWithDescription = [];
-        foreach ($availableImageHandlers as $imageHandler) {
-            $availableDriversWithDescription[$imageHandler->driverName] = $imageHandler->description;
+        if ($driver === null || $driver === '') {
+            $options = [];
+            foreach ($imageHandlers->driverNames() as $driverName) {
+                if ($imageHandlers->isReady($driverName)) {
+                    $options[$driverName] = 'ready to use';
+                } else {
+                    $options[$driverName] = 'unavailable on your system';
+                }
+            }
+            $driver = $this->output->select(
+                sprintf('<comment>Select Image Handler to use</comment> (ENTER=<info>%s</info>): ', $imageHandlers->preferredDriverName()),
+                $options,
+                $imageHandlers->preferredDriverName()
+            );
         }
 
-        if ($driver === null || $driver === '') {
-            $preferredImageHandler = $this->imageHandlerService->getPreferredImageHandler();
-            $driver = $this->output->select(
-                sprintf('Select Image Handler (<info>%s</info>): ', $preferredImageHandler->driverName),
-                $availableDriversWithDescription,
-                $preferredImageHandler->driverName
-            );
+        if (!$imageHandlers->isReady($driver)) {
+            $this->outputLine('');
+            $this->outputLine('<comment>WARNING: Driver %s is not ready to use. We will nevertheless configure it in Neos,</comment>', [$driver]);
+            $this->outputLine('<comment>         but you need to fix the prerequisites, else image rendering is BROKEN.</comment>');
         }
 
         $settingsToWrite = [
             'driver' => $driver
         ];
 
-        if ($this->imageHandlerService->isDriverEnabledInConfiguration($driver) === false) {
-            $this->outputLine('Enabled driver.');
-            $settingsToWrite['enabledDrivers'][$driver] = true;
-        }
+        $this->outputLine('');
+        $this->outputLine('Enabled driver <info>%s</info>:', [$driver]);
+        $settingsToWrite['enabledDrivers'][$driver] = true;
 
         $filename = sprintf('%s%s/Settings.Imagehandling.yaml', FLOW_PATH_CONFIGURATION, $this->bootstrap->getContext()->__toString());
+        self::writeSettings($filename, 'Neos.Imagine', $settingsToWrite);
+        if (strtolower($driver) === 'vips') {
+            self::writeSettings($filename, 'Neos.Media.image.defaultOptions.interlace', null);
+        }
+        $this->outputSettings($filename);
         $this->outputLine();
-        $this->output(sprintf('<info>%s</info>', $this->writeSettings($filename, 'Neos.Imagine', $settingsToWrite)));
-        $this->outputLine();
-        $this->outputLine(sprintf('The new image handler setting were written to <info>%s</info>', $filename));
+        $this->outputLine('The new image handler setting were written to <info>%s</info>', [$filename]);
     }
 
     /**
@@ -82,9 +107,8 @@ class SetupCommandController extends CommandController
      * @param string $filename The filename the settings are stored in
      * @param string $path The configuration path
      * @param mixed $settings The actual settings to write
-     * @return string The added yaml code
      */
-    private function writeSettings(string $filename, string $path, mixed $settings): string
+    private static function writeSettings(string $filename, string $path, mixed $settings): void
     {
         if (file_exists($filename)) {
             $previousSettings = Yaml::parseFile($filename) ?? [];
@@ -93,6 +117,10 @@ class SetupCommandController extends CommandController
         }
         $newSettings = Arrays::setValueByPath($previousSettings, $path, $settings);
         file_put_contents($filename, YAML::dump($newSettings, 10, 2));
-        return YAML::dump(Arrays::setValueByPath([],$path, $settings), 10, 2);
+    }
+
+    private function outputSettings(string $filename): void
+    {
+        $this->output('<info>%s</info>', [YAML::dump(Yaml::parseFile($filename), 10, 2)]);
     }
 }
