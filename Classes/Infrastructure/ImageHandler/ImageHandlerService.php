@@ -32,7 +32,7 @@ class ImageHandlerService
      */
     private readonly array $supportedImageHandlersByPreference;
 
-    private const array REQUIRED_IMAGE_FORMATS = [
+    private const REQUIRED_IMAGE_FORMATS = [
         'jpg' => 'resource://Neos.Neos/Private/Installer/TestImages/Test.jpg',
         'gif' => 'resource://Neos.Neos/Private/Installer/TestImages/Test.gif',
         'png' => 'resource://Neos.Neos/Private/Installer/TestImages/Test.png',
