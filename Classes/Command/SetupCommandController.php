@@ -29,7 +29,7 @@ class SetupCommandController extends CommandController
     #[Flow\Inject]
     protected Bootstrap $bootstrap;
 
-    public function imageHandlerCommand(string $driver = null): void
+    public function imageHandlerCommand(?string $driver = null): void
     {
         $imageHandlers = $this->imageHandlerService->determineAvailabilityForImageHandlers();
 
