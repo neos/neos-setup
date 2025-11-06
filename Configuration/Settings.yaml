@@ -10,3 +10,5 @@ Neos:
           className: Neos\Neos\Setup\Infrastructure\Healthcheck\CrHealthcheck
         site:
           className: Neos\Neos\Setup\Infrastructure\Healthcheck\SiteHealthcheck
+        siteDimension:
+          className: Neos\Neos\Setup\Infrastructure\Healthcheck\SiteDimensionHealthcheck
