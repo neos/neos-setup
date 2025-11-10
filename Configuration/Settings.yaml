@@ -8,7 +8,7 @@ Neos:
           className: Neos\Neos\Setup\Infrastructure\Healthcheck\ImageHandlerHealthcheck
         cr:
           className: Neos\Neos\Setup\Infrastructure\Healthcheck\CrHealthcheck
-        site:
-          className: Neos\Neos\Setup\Infrastructure\Healthcheck\SiteHealthcheck
         siteConfiguration:
           className: Neos\Neos\Setup\Infrastructure\Healthcheck\SiteConfigurationHealthcheck
+        site:
+          className: Neos\Neos\Setup\Infrastructure\Healthcheck\SiteHealthcheck
