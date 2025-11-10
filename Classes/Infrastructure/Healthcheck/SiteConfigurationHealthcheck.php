@@ -12,13 +12,12 @@ use Neos\Setup\Domain\HealthcheckEnvironment;
 use Neos\Setup\Domain\HealthcheckInterface;
 use Neos\Setup\Domain\Status;
 
-class SiteDimensionHealthcheck implements HealthcheckInterface
+class SiteConfigurationHealthcheck implements HealthcheckInterface
 {
     public function __construct(
-        private SiteRepository            $siteRepository,
+        private SiteRepository $siteRepository,
         private ContentRepositoryRegistry $contentRepositoryRegistry,
-    )
-    {
+    ) {
     }
 
     public function getTitle(): string
