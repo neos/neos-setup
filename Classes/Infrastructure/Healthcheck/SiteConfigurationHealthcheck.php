@@ -41,7 +41,7 @@ class SiteConfigurationHealthcheck implements HealthcheckInterface
             $siteConfiguration = $site->getConfiguration();
             if (!self::containsId($siteConfiguration->contentRepositoryId, $registeredContentRepositoryIds)) {
                 return new Health(
-                    'For Site ' . $site->getNodeName() . ', the configured content repository ' . $siteConfiguration->contentRepositoryId->value . ' is not registered. Please adjust the contentRepositoryId in Settings.yaml at Neos.Neos.sites / Neos.Neos.sitePresets, and then clear caches via ./flow flow:cache:flush --force.',
+                    'For Site ' . $site->getNodeName() . ', the configured content repository ' . $siteConfiguration->contentRepositoryId->value . ' is not registered. Please adjust the contentRepositoryId in Settings.yaml at Neos.Neos.sites / Neos.Neos.sitePresets, and then clear caches via {{flowCommand}} flow:cache:flush --force.',
                     Status::ERROR(),
                 );
             }
@@ -50,18 +50,17 @@ class SiteConfigurationHealthcheck implements HealthcheckInterface
 
             if (!$contentRepository->getVariationGraph()->getDimensionSpacePoints()->contains($siteConfiguration->defaultDimensionSpacePoint)) {
                 return new Health(
-                    'For Site ' . $site->getNodeName() . ', the defaultDimensionSpacePoint ' . $siteConfiguration->defaultDimensionSpacePoint->toJson() . ' is not part of the configured dimensions of content repository ' . $contentRepository->id->value . ' ' . $contentRepository->getVariationGraph()->getDimensionSpacePoints()->toJson() . '. You need to change Settings.yaml at Neos.Neos.sites.[site-or-*].contentDimensions.defaultDimensionSpacePoint, and then clear the cache via ./flow flow:cache:flush --force.',
+                    'For Site ' . $site->getNodeName() . ', the defaultDimensionSpacePoint ' . $siteConfiguration->defaultDimensionSpacePoint->toJson() . ' is not part of the configured dimensions of content repository ' . $contentRepository->id->value . ' ' . $contentRepository->getVariationGraph()->getDimensionSpacePoints()->toJson() . '. You need to change Settings.yaml at Neos.Neos.sites.[site-or-*].contentDimensions.defaultDimensionSpacePoint, and then clear the cache via {{flowCommand}} flow:cache:flush --force.',
                     Status::ERROR(),
                 );
             }
         }
 
         return new Health(
-            'Site and content repository dimensions match - all good!',
+            'Neos sites are correctly configured',
             Status::OK(),
         );
     }
-
 
     private static function containsId(ContentRepositoryId $needle, ContentRepositoryIds $ids)
     {
