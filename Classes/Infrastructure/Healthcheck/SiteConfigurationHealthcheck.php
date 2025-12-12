@@ -103,7 +103,7 @@ class SiteConfigurationHealthcheck implements HealthcheckInterface
             if (!$contentRepository->getVariationGraph()->getDimensionSpacePoints()->contains($siteConfiguration->defaultDimensionSpacePoint)) {
                 return new Health(
                     sprintf(
-                        'Site configuration "Neos.Neos.sites.%1$s" uses defaultDimensionSpacePoint %2$s which not part of the configured dimensions %3$s of content repository %4s. You need to change Settings.yaml at Neos.Neos.sites.%1$s.contentDimensions.defaultDimensionSpacePoint, and then clear the cache via {{flowCommand}} flow:cache:flush --force.',
+                        'Site configuration "Neos.Neos.sites.%1$s" uses defaultDimensionSpacePoint %2$s which not part of the configured dimensions %3$s of content repository %4s. You need to change Settings.yaml at Neos.Neos.sites.%1$s.contentDimensions.defaultDimensionSpacePoint, and possibly also clear the routing cache via <code>{{flowCommand}} cache:flushone Flow_Mvc_Routing_Route</code>.',
                         $siteNameRaw,
                         $siteConfiguration->defaultDimensionSpacePoint->toJson(),
                         $contentRepository->getVariationGraph()->getDimensionSpacePoints()->toJson(),
